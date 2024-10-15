@@ -50,6 +50,8 @@ fn main() {
         let method = request_first_line.next().unwrap();
         let resource = request_first_line.next().unwrap();
 
+        println!("{} - {}", &method, &resource);
+
         if method == "GET" {
             if resource == "/" {
                 let mut index_page = File::open(format!(
@@ -66,10 +68,21 @@ fn main() {
                     .unwrap();
                 inc.write(format!("Content-Type: text/html; charset=UTF-8\r\n").as_bytes())
                     .unwrap();
-                inc.write(format!("Content-Length: \r\n").as_bytes())
+                inc.write(format!("Content-Length: {}\r\n", index_content.len()).as_bytes())
                     .unwrap();
                 inc.write(format!("\r\n").as_bytes()).unwrap();
                 inc.write(index_content.as_bytes()).unwrap();
+            } else if resource == "/new-message" {
+                let new_message = "{\"message\": \"This is another message for you\"}";
+
+                inc.write(format!("HTTP/1.1 200 OK\r\n").as_bytes())
+                    .unwrap();
+                inc.write(format!("Content-Type: application/json\r\n").as_bytes())
+                    .unwrap();
+                inc.write(format!("Content-Length: {}\r\n", new_message.len()).as_bytes())
+                    .unwrap();
+                inc.write(format!("\r\n").as_bytes()).unwrap();
+                inc.write(new_message.as_bytes()).unwrap();
             }
         }
     }
