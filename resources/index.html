@@ -8,5 +8,30 @@
 
     <body>
         <h1>Under Construction</h1>
+
+        <div id="entry"></div>
+
+        <button>Get a new message</button>
+
+        <script>
+            const entry = document.querySelector('#entry');
+            const button = document.querySelector('button');
+
+            async function get_new_message() {
+                let response = await fetch(`${window.location.origin}/new-message`);
+                const message_text = await response.text();
+                const message_json = JSON.parse(message_text);
+
+                let new_p = document.createElement('p');
+                let new_node = document.createTextNode(message_json.message);
+
+                new_p.appendChild(new_node);
+                entry.appendChild(new_p);
+            }
+
+            button.addEventListener('click', e => {
+                get_new_message();
+            });
+        </script>
     </body>
 </html>
