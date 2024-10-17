@@ -8,8 +8,15 @@
 
     <body>
         <style>
+            * {
+                color: white;
+            }
+
+            body {
+                background-color: black;
+            }
             #chat-window {
-                border: 1px solid black;
+                border: 1px solid grey;
                 width: 30rem;
                 height: 60rem;
                 display: flex;
@@ -35,7 +42,9 @@
                 let new_node = document.createTextNode(message_json.message);
 
                 new_p.style.width = "80%";
-                new_p.style.border = "1px solid black";
+                new_p.style.border = "1px solid grey";
+                new_p.style.borderRadius = "4px";
+                new_p.style.padding = "0.25em";
 
                 new_p.appendChild(new_node);
                 chat_window.appendChild(new_p);
@@ -43,8 +52,7 @@
                 new_p.scrollIntoView();
             }
 
-            setInterval(get_new_message, 5000);
-            
+            const message_recv = setInterval(get_new_message, 5000);
         </script>
     </body>
 </html>
