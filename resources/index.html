@@ -23,11 +23,8 @@
 
         <div id="chat-window"></div>
 
-        <button>Get a new message</button>
-
         <script>
             const chat_window = document.querySelector('#chat-window');
-            const button = document.querySelector('button');
 
             async function get_new_message() {
                 let response = await fetch(`${window.location.origin}/new-message`);
@@ -46,9 +43,8 @@
                 new_p.scrollIntoView();
             }
 
-            button.addEventListener('click', e => {
-                get_new_message();
-            });
+            setInterval(get_new_message, 5000);
+            
         </script>
     </body>
 </html>
