@@ -1,10 +1,12 @@
 // Data to be sent with qr code
 // Server's ip and port information
 
+use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use std::io::{BufWriter, Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::path::PathBuf;
 
 use local_ip_address::local_ip;
 use qrcode::QrCode;
@@ -14,6 +16,57 @@ enum HttpStatus {
     Found,
     SeeOther,
     NotFound,
+}
+
+struct HttpRequest {
+    method: String,
+    resource: String,
+    http_version: String,
+    body: String,
+}
+
+impl HttpRequest {
+    fn parse(raw_request: &str) -> Self {
+        let lines: Vec<_> = raw_request.lines().collect();
+
+        let mut start_line = lines[0].split_whitespace();
+
+        Self {
+            method: start_line.next().unwrap().to_string(),
+            resource: start_line.next().unwrap().to_string(),
+            http_version: start_line.next().unwrap().to_string(),
+            body: lines.last().unwrap().replace("\0", "").to_string(),
+        }
+    }
+}
+
+struct Server {
+    listener: TcpListener,
+    static_files_dir: PathBuf,
+    routes: HashMap<String, String>,
+}
+
+impl Server {
+    fn new(address: &str, static_files_dir: Option<&str>) -> Self {
+        let mut routes = HashMap::new();
+
+        routes.insert("/".to_string(), "index.html".to_string());
+
+        Self {
+            listener: TcpListener::bind(address).expect("Error binding server to address"),
+            static_files_dir: static_files_dir
+                .unwrap_or(env::current_dir().unwrap().to_str().unwrap())
+                .parse()
+                .expect("Failed parsing static files directory"),
+            routes,
+        }
+    }
+
+    fn register_route(&mut self, route: String, resource: String) {
+        if !self.routes.contains_key(&route) {
+            self.routes.insert(route, resource);
+        }
+    }
 }
 
 fn render_server_qr_code(addr: &str, port: &str) {
