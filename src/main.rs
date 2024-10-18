@@ -1,13 +1,20 @@
 // Data to be sent with qr code
 // Server's ip and port information
 
-use std::env::{self, Args};
+use std::env;
 use std::fs::File;
 use std::io::{BufWriter, Read, Write};
 use std::net::{TcpListener, TcpStream};
 
 use local_ip_address::local_ip;
 use qrcode::QrCode;
+
+enum HttpStatus {
+    OK,
+    Found,
+    SeeOther,
+    NotFound,
+}
 
 fn render_server_qr_code(addr: &str, port: &str) {
     let code = QrCode::new(format!("http://{}", format!("{}:{}", addr, port))).unwrap();
@@ -26,7 +33,7 @@ fn mime_type(file: &str) -> Result<String, String> {
         Some("html") => Ok("text/html".to_string()),
         Some("css") => Ok("text/css".to_string()),
         Some("js") => Ok("text/javascript".to_string()),
-        None | Some(&_) => Err("Mime type could not be determined".to_string()),
+        _ => Err("Mime type could not be determined".to_string()),
     }
 }
 
@@ -44,6 +51,7 @@ fn retrieve_resource(locator: &str, stream: TcpStream) {
                 .expect("Could not read from resource");
 
             let mut response = BufWriter::new(stream);
+
             response
                 .write(format!("HTTP/1.1 200 OK\r\n",).as_bytes())
                 .unwrap();
