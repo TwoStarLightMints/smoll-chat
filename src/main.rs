@@ -1,7 +1,7 @@
 // Data to be sent with qr code
 // Server's ip and port information
 
-use std::env;
+use std::env::{self, Args};
 use std::fs::File;
 use std::io::{BufWriter, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -18,7 +18,6 @@ fn render_server_qr_code(addr: &str, port: &str) {
         .dark_color("\u{001b}[1;34;37;40m \u{001b}[0m")
         .build();
 
-    println!("Server now running at http://{}:{}", addr, port);
     println!("{qr_term}");
 }
 
@@ -110,7 +109,11 @@ fn main() {
     let listener =
         TcpListener::bind(format!("{}:{}", addr, port)).expect("Failed to initialize server");
 
-    render_server_qr_code(&addr, port);
+    println!("Server now running at http://{}:{}", addr, port);
+
+    if args.len() > 3 && args[3] == "--qrcode" {
+        render_server_qr_code(&addr, port);
+    }
 
     for stream in listener.incoming() {
         let mut inc = stream.unwrap();
