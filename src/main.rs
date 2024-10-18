@@ -3,7 +3,7 @@
 
 use std::env;
 use std::fs::File;
-use std::io::{BufRead, BufWriter, Read, Write};
+use std::io::{BufWriter, Read, Write};
 use std::net::{TcpListener, TcpStream};
 
 use local_ip_address::local_ip;
@@ -45,8 +45,9 @@ fn retrieve_resource(locator: &str, stream: TcpStream) {
                 .expect("Could not read from resource");
 
             let mut response = BufWriter::new(stream);
-
-            response.write("HTTP/1.1 200 OK\r\n".as_bytes()).unwrap();
+            response
+                .write(format!("HTTP/1.1 200 OK\r\n",).as_bytes())
+                .unwrap();
             response
                 .write_fmt(format_args!(
                     "Content-type: {}\r\n",
@@ -60,6 +61,8 @@ fn retrieve_resource(locator: &str, stream: TcpStream) {
                 ))
                 .unwrap();
             response.write(resource_content.as_bytes()).unwrap();
+
+            response.flush().unwrap();
         }
         Err(_) => {
             let mut resource_content = String::new();
@@ -87,6 +90,8 @@ fn retrieve_resource(locator: &str, stream: TcpStream) {
                 ))
                 .unwrap();
             response.write(resource_content.as_bytes()).unwrap();
+
+            response.flush().unwrap();
         }
     }
 }
@@ -114,10 +119,12 @@ fn main() {
 
         let _ = inc.read(&mut request).unwrap();
 
-        // Ex. GET / HTTP/1.1
-        let request_lines = request.lines().next().unwrap().unwrap();
+        let request = String::from_utf8(request.to_vec()).unwrap();
 
-        let mut request_first_line = request_lines.split(' ').into_iter();
+        // Ex. GET / HTTP/1.1
+        let request_lines: Vec<_> = request.lines().collect();
+
+        let mut request_first_line = request_lines[0].split(' ').into_iter();
 
         let method = request_first_line.next().unwrap();
         let resource = request_first_line.next().unwrap();
@@ -154,6 +161,30 @@ fn main() {
                 inc.write(new_message.as_bytes()).unwrap();
             }
         } else if method == "POST" {
+            if resource == "/login" {
+                let username = &request_lines[request_lines
+                    .iter()
+                    .position(|l| l.starts_with("username"))
+                    .unwrap()]
+                .split("=")
+                .last()
+                .unwrap()
+                .replace("\0", "");
+
+                inc.write("HTTP/1.1 303 See other\r\n".as_bytes()).unwrap();
+                inc.write("Content-type: text/html; charset=utf-8\r\n".as_bytes())
+                    .unwrap();
+                inc.write(
+                    format!("Location: http://{}/chat\r\n", format!("{}:{}", addr, port))
+                        .as_bytes(),
+                )
+                .unwrap();
+                inc.write_all(
+                    format!("Set-Cookie: username={username}; Path=/; HttpOnly").as_bytes(),
+                )
+                .unwrap();
+                inc.write("Content-length: 0\r\n\r\n".as_bytes()).unwrap();
+            }
         }
     }
 }
