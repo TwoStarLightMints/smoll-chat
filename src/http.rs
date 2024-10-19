@@ -22,36 +22,12 @@ impl HttpRequest {
 
         let mut request_line = sections[0].split_whitespace();
 
-        let body: Option<String>;
-
-        if sections.last().unwrap().starts_with('\0') || sections.last().unwrap().is_empty() {
-            body = None;
-        } else {
-            let content_len_row = sections
-                .iter()
-                .position(|h| h.to_lowercase().starts_with("content-length"))
-                .expect("Body was found yet no content length was given");
-
-            let content_len = sections[content_len_row]
-                .split_whitespace()
-                .last()
-                .unwrap()
-                .parse()
-                .unwrap();
-
-            body = Some(sections.last().unwrap()[0..content_len].to_string());
-        }
-
         let mut headers: HashMap<String, String> = HashMap::new();
 
         sections
             .iter()
             .skip(1)
-            .take(if body.is_none() {
-                sections.len() - 1
-            } else {
-                sections.len() - 2
-            })
+            .take_while(|s| !s.is_empty())
             .map(|s| s.to_string())
             .filter(|h| !h.is_empty())
             .for_each(|h| {
@@ -62,6 +38,13 @@ impl HttpRequest {
                     pieces.next().unwrap().to_string(),
                 );
             });
+
+        let body: Option<String>;
+
+        match headers.get("Content-Length") {
+            Some(len) => body = Some(sections.last().unwrap()[0..len.parse().unwrap()].to_string()),
+            None => body = None,
+        }
 
         Self {
             method: request_line.next().unwrap().to_string(),
