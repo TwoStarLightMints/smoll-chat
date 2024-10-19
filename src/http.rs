@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 enum HttpStatus {
     OK,
@@ -52,6 +52,54 @@ impl HttpRequest {
             http_version: request_line.next().unwrap().to_string(),
             headers,
             body,
+        }
+    }
+}
+
+struct HttpResponse {
+    http_version: String,
+    status_code: u32,
+    status_message: String,
+    headers: HashMap<String, String>,
+    body: Option<String>,
+}
+
+impl HttpResponse {
+    fn new(http_version: String, status_code: u32, status_message: String) -> Self {
+        Self {
+            http_version,
+            status_code,
+            status_message,
+            headers: HashMap::new(),
+            body: None,
+        }
+    }
+
+    fn add_header(&mut self, header_key: String, header_value: String) {
+        self.headers.insert(header_key, header_value);
+    }
+
+    fn add_body(&mut self, body: String) {
+        self.body = Some(body);
+    }
+}
+
+impl Display for HttpResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let status_line = format!(
+            "{} {} {}\r\n",
+            self.http_version, self.status_code, self.status_message
+        );
+
+        let mut headers = String::new();
+
+        for (k, v) in self.headers.iter() {
+            headers.push_str(&format!("{}: {}\r\n", k, v));
+        }
+
+        match self.body.as_ref() {
+            Some(b) => write!(f, "{}{}\r\n{}", status_line, headers, b),
+            None => write!(f, "{}{}\r\n", status_line, headers),
         }
     }
 }
@@ -177,5 +225,15 @@ mod tests {
         };
 
         assert_eq!(control, HttpRequest::parse(&request_str));
+    }
+
+    #[test]
+    fn test_proper_http_response_formatting() {
+        let mut http_response = HttpResponse::new("HTTP/1.1".to_string(), 200, "OK".to_string());
+        http_response.add_header("Set-Cookie".to_string(), "username=asdf".to_string());
+
+        let control = "HTTP/1.1 200 OK\r\nSet-Cookie: username=asdf\r\n\r\n".to_string();
+
+        assert_eq!(control, http_response.to_string());
     }
 }
