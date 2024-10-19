@@ -8,16 +8,16 @@ enum HttpStatus {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct HttpRequest {
-    method: String,
-    resource: String,
-    http_version: String,
+pub struct HttpRequest {
+    pub method: String,
+    pub resource: String,
+    pub http_version: String,
     headers: HashMap<String, String>,
-    body: Option<String>,
+    pub body: Option<String>,
 }
 
 impl HttpRequest {
-    fn parse(raw_request: &str) -> Self {
+    pub fn parse(raw_request: &str) -> Self {
         let sections = raw_request.split("\r\n").collect::<Vec<&str>>();
 
         let mut request_line = sections[0].split_whitespace();
@@ -54,9 +54,13 @@ impl HttpRequest {
             body,
         }
     }
+
+    pub fn get_header(&self, header_name: &str) -> Option<&String> {
+        self.headers.get(header_name)
+    }
 }
 
-struct HttpResponse {
+pub struct HttpResponse {
     http_version: String,
     status_code: u32,
     status_message: String,
@@ -65,7 +69,7 @@ struct HttpResponse {
 }
 
 impl HttpResponse {
-    fn new(http_version: String, status_code: u32, status_message: String) -> Self {
+    pub fn new(http_version: String, status_code: u32, status_message: String) -> Self {
         Self {
             http_version,
             status_code,
@@ -75,11 +79,11 @@ impl HttpResponse {
         }
     }
 
-    fn add_header(&mut self, header_key: String, header_value: String) {
+    pub fn add_header(&mut self, header_key: String, header_value: String) {
         self.headers.insert(header_key, header_value);
     }
 
-    fn add_body(&mut self, body: String) {
+    pub fn add_body(&mut self, body: String) {
         self.body = Some(body);
     }
 }
@@ -231,8 +235,11 @@ mod tests {
     fn test_proper_http_response_formatting() {
         let mut http_response = HttpResponse::new("HTTP/1.1".to_string(), 200, "OK".to_string());
         http_response.add_header("Set-Cookie".to_string(), "username=asdf".to_string());
+        http_response.add_header("Content-Length".to_string(), "22".to_string());
 
-        let control = "HTTP/1.1 200 OK\r\nSet-Cookie: username=asdf\r\n\r\n".to_string();
+        let control = "HTTP/1.1 200 OK\r\nSet-Cookie: username=asdf\r\nContent-Length: 22\r\n\r\nSimulated file content".to_string();
+
+        http_response.add_body("Simulated file content".to_string());
 
         assert_eq!(control, http_response.to_string());
     }
