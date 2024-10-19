@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 enum HttpStatus {
     OK,
     Found,
@@ -10,7 +12,7 @@ struct HttpRequest {
     method: String,
     resource: String,
     http_version: String,
-    headers: Vec<String>,
+    headers: HashMap<String, String>,
     body: Option<String>,
 }
 
@@ -40,7 +42,9 @@ impl HttpRequest {
             body = Some(sections.last().unwrap()[0..content_len].to_string());
         }
 
-        let headers = sections
+        let mut headers: HashMap<String, String> = HashMap::new();
+
+        sections
             .iter()
             .skip(1)
             .take(if body.is_none() {
@@ -50,7 +54,14 @@ impl HttpRequest {
             })
             .map(|s| s.to_string())
             .filter(|h| !h.is_empty())
-            .collect();
+            .for_each(|h| {
+                let mut pieces = h.split(": ").map(|p| p.to_string());
+
+                headers.insert(
+                    pieces.next().unwrap().to_string(),
+                    pieces.next().unwrap().to_string(),
+                );
+            });
 
         Self {
             method: request_line.next().unwrap().to_string(),
@@ -87,16 +98,34 @@ mod tests {
             request_str.push_str("\r\n");
         }
 
+        let mut headers = HashMap::new();
+
+        headers.insert("Host".to_string(), "192.168.4.28:1234".to_string());
+        headers.insert(
+            "User-Agent".to_string(),
+            "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0".to_string(),
+        );
+        headers.insert(
+            "Accept".to_string(),
+            "image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5".to_string(),
+        );
+        headers.insert("Accept-Language".to_string(), "en-US,en;q=0.5".to_string());
+        headers.insert("Accept-Encoding".to_string(), "gzip, deflate".to_string());
+        headers.insert("Connection".to_string(), "keep-alive".to_string());
+        headers.insert("Connection".to_string(), "keep-alive".to_string());
+        headers.insert(
+            "Referer".to_string(),
+            "http://192.168.4.28:1234/".to_string(),
+        );
+        headers.insert("Priority".to_string(), "u=6".to_string());
+
         request_str.push_str("\r\n");
 
         let control = HttpRequest {
             method: "GET".to_string(),
             resource: "/favicon.ico".to_string(),
             http_version: "HTTP/1.1".to_string(),
-            headers: request[1..(request.len())]
-                .iter()
-                .map(|l| l.to_string())
-                .collect(),
+            headers,
             body: None,
         };
 
@@ -132,14 +161,35 @@ mod tests {
 
         request_str.push_str("username=asd");
 
+        let mut headers = HashMap::new();
+
+        headers.insert("Host".to_string(), "192.168.4.28:1234".to_string());
+        headers.insert(
+            "User-Agent".to_string(),
+            "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0".to_string(),
+        );
+        headers.insert("Accept".to_string(), "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8".to_string());
+        headers.insert("Accept-Language".to_string(), "en-US,en;q=0.5".to_string());
+        headers.insert("Accept-Encoding".to_string(), "gzip, deflate".to_string());
+        headers.insert(
+            "Content-Type".to_string(),
+            "application/x-www-form-urlencoded".to_string(),
+        );
+        headers.insert("Content-Length".to_string(), "12".to_string());
+        headers.insert("Origin".to_string(), "http://192.168.4.28:1234".to_string());
+        headers.insert("Connection".to_string(), "keep-alive".to_string());
+        headers.insert(
+            "Referer".to_string(),
+            "http://192.168.4.28:1234/".to_string(),
+        );
+        headers.insert("Upgrade-Insecure-Requests".to_string(), "1".to_string());
+        headers.insert("Priority".to_string(), "u=0, i".to_string());
+
         let control = HttpRequest {
             method: "POST".to_string(),
             resource: "/login".to_string(),
             http_version: "HTTP/1.1".to_string(),
-            headers: request[1..(request.len())]
-                .iter()
-                .map(|l| l.to_string())
-                .collect(),
+            headers,
             body: Some("username=asd".to_string()),
         };
 
