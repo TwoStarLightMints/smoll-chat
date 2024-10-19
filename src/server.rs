@@ -1,3 +1,9 @@
+use crate::error::RouteAlreadyRegistered;
+use std::collections::HashMap;
+use std::env;
+use std::net::TcpListener;
+use std::path::PathBuf;
+
 struct Server {
     listener: TcpListener,
     static_files_dir: PathBuf,
@@ -20,9 +26,16 @@ impl Server {
         }
     }
 
-    fn register_route(&mut self, route: String, resource: String) {
+    fn register_route(
+        &mut self,
+        route: String,
+        resource: String,
+    ) -> Result<(), RouteAlreadyRegistered> {
         if !self.routes.contains_key(&route) {
             self.routes.insert(route, resource);
+            return Ok(());
         }
+
+        Err(RouteAlreadyRegistered)
     }
 }
