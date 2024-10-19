@@ -11,56 +11,6 @@ use std::path::PathBuf;
 use local_ip_address::local_ip;
 use qrcode::QrCode;
 
-enum HttpStatus {
-    OK,
-    Found,
-    SeeOther,
-    NotFound,
-}
-
-struct HttpRequest {
-    method: String,
-    resource: String,
-    http_version: String,
-    headers: Vec<String>,
-    body: String,
-}
-
-impl HttpRequest {
-    fn parse(raw_request: &str) -> Self {
-        let lines: Vec<_> = raw_request.lines().collect();
-
-        let mut request_line = lines[0].split_whitespace();
-
-        let body = lines.last().unwrap().to_string();
-
-        let headers: Vec<String> = lines
-            .iter()
-            .skip(1)
-            .take(lines.len() - 2)
-            .map(|h| h.to_string())
-            .collect();
-
-        let content_length = headers[headers
-            .iter()
-            .position(|h| h.contains("Content-length"))
-            .unwrap()]
-        .split("=")
-        .last()
-        .unwrap()
-        .parse::<usize>()
-        .unwrap();
-
-        Self {
-            method: request_line.next().unwrap().to_string(),
-            resource: request_line.next().unwrap().to_string(),
-            http_version: request_line.next().unwrap().to_string(),
-            headers,
-            body: body.chars().take(content_length).collect(),
-        }
-    }
-}
-
 struct Server {
     listener: TcpListener,
     static_files_dir: PathBuf,
@@ -205,6 +155,8 @@ fn main() {
         let _ = inc.read(&mut request).unwrap();
 
         let request = String::from_utf8(request.to_vec()).unwrap();
+
+        println!("{request}");
 
         // Ex. GET / HTTP/1.1
         let request_lines: Vec<_> = request.lines().collect();
