@@ -12,7 +12,7 @@ struct Server {
 
 impl Server {
     fn new(address: &str, static_files_dir: Option<&str>) -> Self {
-        let mut routes = HashMap::new();
+        let mut routes = HashMap::with_capacity(1);
 
         routes.insert("/".to_string(), "index.html".to_string());
 
