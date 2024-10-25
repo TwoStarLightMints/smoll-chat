@@ -24,11 +24,21 @@
                 align-items: center;
                 overflow-y: scroll;
             }
+
+            textarea, button {
+                color: black;
+            }
         </style>
 
         <h1>Under Construction</h1>
 
         <div id="chat-window"></div>
+
+        <form action="/message" method="post">
+            <textarea name="message" id="message"></textarea>
+
+            <button type="submit">Send</button>
+        </form>
 
         <script>
             const chat_window = document.querySelector('#chat-window');
@@ -52,7 +62,21 @@
                 new_p.scrollIntoView();
             }
 
-            const message_recv = setInterval(get_new_message, 5000);
+            const message_recv = setInterval(get_new_message, 50);
+
+
+            const textarea = document.querySelector('textarea');
+
+            document.querySelector('button[type="submit"]').addEventListener('click', e => {
+                e.preventDefault();
+
+                fetch(`${window.location.origin}/message`, {
+                    method: "post",
+                    body: textarea.value,
+                });
+
+                textarea.value = "";
+            });
         </script>
     </body>
 </html>
