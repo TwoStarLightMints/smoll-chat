@@ -1,12 +1,5 @@
 use std::{collections::HashMap, fmt::Display};
 
-enum HttpStatus {
-    OK,
-    Found,
-    SeeOther,
-    NotFound,
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct HttpRequest {
     pub method: String,
@@ -14,6 +7,7 @@ pub struct HttpRequest {
     pub http_version: String,
     headers: HashMap<String, String>,
     pub body: Option<String>,
+    querys: Option<HashMap<String, String>>,
 }
 
 impl HttpRequest {
@@ -46,12 +40,46 @@ impl HttpRequest {
             None => body = None,
         }
 
-        Self {
-            method: request_line.next().unwrap().to_string(),
-            resource: request_line.next().unwrap().to_string(),
-            http_version: request_line.next().unwrap().to_string(),
-            headers,
-            body,
+        let method = request_line.next().unwrap().to_string();
+
+        let mut resource_set = request_line.next().unwrap().split("?");
+        let resource = resource_set.next().unwrap().to_string();
+
+        if let Some(query_set) = resource_set.next() {
+            let query_set_iter = query_set.split("&");
+
+            let mut querys = HashMap::new();
+
+            query_set_iter.for_each(|q| {
+                let mut key_val = q.split("=");
+
+                querys.insert(
+                    key_val.next().unwrap().to_string(),
+                    key_val.next().unwrap().to_string(),
+                );
+            });
+
+            let http_version = request_line.next().unwrap().to_string();
+
+            Self {
+                method,
+                resource,
+                http_version,
+                headers,
+                body,
+                querys: Some(querys),
+            }
+        } else {
+            let http_version = request_line.next().unwrap().to_string();
+
+            Self {
+                method,
+                resource,
+                http_version,
+                headers,
+                body,
+                querys: None,
+            }
         }
     }
 
@@ -60,10 +88,11 @@ impl HttpRequest {
     }
 }
 
+#[derive(Debug)]
 pub struct HttpResponse {
-    http_version: String,
-    status_code: u32,
-    status_message: String,
+    pub http_version: String,
+    pub status_code: u32,
+    pub status_message: String,
     headers: HashMap<String, String>,
     body: Option<String>,
 }
@@ -162,6 +191,7 @@ mod tests {
             http_version: "HTTP/1.1".to_string(),
             headers,
             body: None,
+            querys: None,
         };
 
         assert_eq!(control, HttpRequest::parse(&request_str));
@@ -226,6 +256,128 @@ mod tests {
             http_version: "HTTP/1.1".to_string(),
             headers,
             body: Some("username=asd".to_string()),
+            querys: None,
+        };
+
+        assert_eq!(control, HttpRequest::parse(&request_str));
+    }
+
+    #[test]
+    fn test_parse_request_with_query_parameter() {
+        let request = [
+            "GET /favicon.ico?user=unknown HTTP/1.1",
+            "Host: 192.168.4.28:1234",
+            "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0",
+            "Accept: image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5",
+            "Accept-Language: en-US,en;q=0.5",
+            "Accept-Encoding: gzip, deflate",
+            "Connection: keep-alive",
+            "Referer: http://192.168.4.28:1234/",
+            "Priority: u=6",
+        ];
+
+        let mut request_str = String::new();
+
+        for line in request {
+            request_str.push_str(line);
+            request_str.push_str("\r\n");
+        }
+
+        let mut headers = HashMap::new();
+
+        headers.insert("Host".to_string(), "192.168.4.28:1234".to_string());
+        headers.insert(
+            "User-Agent".to_string(),
+            "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0".to_string(),
+        );
+        headers.insert(
+            "Accept".to_string(),
+            "image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5".to_string(),
+        );
+        headers.insert("Accept-Language".to_string(), "en-US,en;q=0.5".to_string());
+        headers.insert("Accept-Encoding".to_string(), "gzip, deflate".to_string());
+        headers.insert("Connection".to_string(), "keep-alive".to_string());
+        headers.insert("Connection".to_string(), "keep-alive".to_string());
+        headers.insert(
+            "Referer".to_string(),
+            "http://192.168.4.28:1234/".to_string(),
+        );
+        headers.insert("Priority".to_string(), "u=6".to_string());
+
+        request_str.push_str("\r\n");
+
+        let mut querys = HashMap::new();
+
+        querys.insert("user".to_string(), "unknown".to_string());
+
+        let control = HttpRequest {
+            method: "GET".to_string(),
+            resource: "/favicon.ico".to_string(),
+            http_version: "HTTP/1.1".to_string(),
+            headers,
+            body: None,
+            querys: Some(querys),
+        };
+
+        assert_eq!(control, HttpRequest::parse(&request_str));
+    }
+
+    #[test]
+    fn test_parse_request_with_query_parameters() {
+        let request = [
+            "GET /favicon.ico?user=unknown&time=now HTTP/1.1",
+            "Host: 192.168.4.28:1234",
+            "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0",
+            "Accept: image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5",
+            "Accept-Language: en-US,en;q=0.5",
+            "Accept-Encoding: gzip, deflate",
+            "Connection: keep-alive",
+            "Referer: http://192.168.4.28:1234/",
+            "Priority: u=6",
+        ];
+
+        let mut request_str = String::new();
+
+        for line in request {
+            request_str.push_str(line);
+            request_str.push_str("\r\n");
+        }
+
+        let mut headers = HashMap::new();
+
+        headers.insert("Host".to_string(), "192.168.4.28:1234".to_string());
+        headers.insert(
+            "User-Agent".to_string(),
+            "Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0".to_string(),
+        );
+        headers.insert(
+            "Accept".to_string(),
+            "image/avif,image/webp,image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5".to_string(),
+        );
+        headers.insert("Accept-Language".to_string(), "en-US,en;q=0.5".to_string());
+        headers.insert("Accept-Encoding".to_string(), "gzip, deflate".to_string());
+        headers.insert("Connection".to_string(), "keep-alive".to_string());
+        headers.insert("Connection".to_string(), "keep-alive".to_string());
+        headers.insert(
+            "Referer".to_string(),
+            "http://192.168.4.28:1234/".to_string(),
+        );
+        headers.insert("Priority".to_string(), "u=6".to_string());
+
+        request_str.push_str("\r\n");
+
+        let mut querys = HashMap::new();
+
+        querys.insert("user".to_string(), "unknown".to_string());
+        querys.insert("time".to_string(), "now".to_string());
+
+        let control = HttpRequest {
+            method: "GET".to_string(),
+            resource: "/favicon.ico".to_string(),
+            http_version: "HTTP/1.1".to_string(),
+            headers,
+            body: None,
+            querys: Some(querys),
         };
 
         assert_eq!(control, HttpRequest::parse(&request_str));
