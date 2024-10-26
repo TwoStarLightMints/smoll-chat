@@ -15,54 +15,87 @@
             body {
                 background-color: black;
             }
+
             #chat-window {
                 border: 1px solid grey;
-                width: 30rem;
-                height: 60rem;
+                width: 30vw;
+                height: 40vh;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 overflow-y: scroll;
             }
 
+            #chat-ui {
+                margin: 0 auto;
+                width: fit-content;
+            }
+
             textarea, button {
                 color: black;
+            }
+
+            form[method="post"] {
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+            }
+
+            .message-bubble {
+                width: 80%;
+                border: 1px solid gray;
+                border-radius: 4px;
+                padding: 0.25em;
             }
         </style>
 
         <h1>Under Construction</h1>
 
-        <div id="chat-window"></div>
+        <div id="chat-ui">
+            <div id="chat-window"></div>
 
-        <form action="/message" method="post">
-            <textarea name="message" id="message"></textarea>
+            <form action="/message" method="post">
+                <textarea name="message" id="message" rows="1"></textarea>
 
-            <button type="submit">Send</button>
-        </form>
+                <button type="submit">Send</button>
+            </form>
+        </div>
 
         <script>
             const chat_window = document.querySelector('#chat-window');
 
             async function get_new_message() {
-                let response = await fetch(`${window.location.origin}/new-message`);
-                const message_text = await response.text();
-                const message_json = JSON.parse(message_text);
+                try {
+                    const response = await fetch(`${window.location.origin}/new-message`);
+                    const message_json = response.json()
+                        .then((value) => {
+                            let new_p = document.createElement('p');
 
-                let new_p = document.createElement('p');
-                let new_node = document.createTextNode(message_json.message);
+                            let new_node;
 
-                new_p.style.width = "80%";
-                new_p.style.border = "1px solid grey";
-                new_p.style.borderRadius = "4px";
-                new_p.style.padding = "0.25em";
+                            if (document.cookie.includes(value.sender)) {
+                                new_node = document.createTextNode(`You: ${value.message}`);
+                            } else {
+                                new_node = document.createTextNode(`${value.sender}: ${value.message}`);
+                            }
 
-                new_p.appendChild(new_node);
-                chat_window.appendChild(new_p);
+                            new_p.setAttribute("class", "message-bubble");
 
-                new_p.scrollIntoView();
+                            new_p.appendChild(new_node);
+                            chat_window.appendChild(new_p);
+
+                            new_p.scrollIntoView();
+                        });
+
+                    new Promise(resolve => setTimeout(resolve, 50));
+
+                    get_new_message();
+                } catch (error) {
+                    console.error("Error encountered: ", error);
+                }
             }
 
-            const message_recv = setInterval(get_new_message, 50);
+            get_new_message();
 
 
             const textarea = document.querySelector('textarea');
@@ -77,6 +110,17 @@
 
                 textarea.value = "";
             });
+
+            // The following grows the number of rows in the textarea
+            // in accordance with the input, I found the solution for this
+            // at https://stackoverflow.com/a/78177385
+            textarea.addEventListener("input", e => {
+                if (textarea.scrollTop > 0) {
+                    while (textarea.scrollTop > 0) {
+                        textarea.rows++;
+                    }
+                }
+            })
         </script>
     </body>
 </html>
