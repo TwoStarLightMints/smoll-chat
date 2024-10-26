@@ -115,6 +115,10 @@ impl HttpResponse {
     pub fn add_body(&mut self, body: String) {
         self.body = Some(body);
     }
+
+    pub fn set_cookie(&mut self, cookie_value: String) {
+        self.headers.insert("Set-Cookie".to_string(), cookie_value);
+    }
 }
 
 impl Display for HttpResponse {

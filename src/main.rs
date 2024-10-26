@@ -114,7 +114,7 @@ fn main() {
                     "text/html; charset=utf-8".to_string(),
                 );
                 response.add_header("Location".to_string(), format!("http://{}/chat", address));
-                response.add_header("Set-Cookie".to_string(), request.body.unwrap());
+                response.set_cookie(request.body.unwrap());
                 response.add_header("Content-Length".to_string(), "0".to_string());
 
                 inc.write(response.to_string().as_bytes()).unwrap();
