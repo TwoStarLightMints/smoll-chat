@@ -5,6 +5,9 @@ use smoll_chat::http::{HttpRequest, HttpResponse};
 use std::env;
 use std::io::{Read, Write};
 use std::net::TcpListener;
+use std::sync::mpsc::{self, Sender};
+use std::thread;
+use std::time::Duration;
 
 use local_ip_address::local_ip;
 use qrcode::QrCode;
@@ -44,7 +47,7 @@ fn main() {
         render_server_qr_code(&address);
     }
 
-    let mut new_message = String::new();
+    let mut message_queue: Vec<Sender<String>> = Vec::new();
 
     for stream in listener.incoming() {
         let mut inc = stream.unwrap();
@@ -64,9 +67,8 @@ fn main() {
                         let mut response =
                             HttpResponse::new("HTTP/1.1".to_string(), 200, "OK".to_string());
 
-                        response
-                            .add_header("Content-Length".to_string(), format!("{}", content.len()));
-                        response.add_header("Content-Type".to_string(), "text/html".to_string());
+                        response.set_content_len(content.len());
+                        response.set_content_type("text/html");
 
                         response.add_body(content);
 
@@ -80,9 +82,8 @@ fn main() {
                         let mut response =
                             HttpResponse::new("HTTP/1.1".to_string(), 200, "OK".to_string());
 
-                        response
-                            .add_header("Content-Length".to_string(), format!("{}", content.len()));
-                        response.add_header("Content-Type".to_string(), "text/html".to_string());
+                        response.set_content_len(content.len());
+                        response.set_content_type("text/html");
 
                         response.add_body(content);
 
@@ -91,41 +92,93 @@ fn main() {
                     Err(e) => eprintln!("Encountered error retrieving resource: {e}"),
                 }
             } else if request.resource == "/new-message" {
-                let new_message = format!("{{\"message\": \"{}\"}}", new_message);
+                let (s, r) = mpsc::channel();
 
-                let mut response = HttpResponse::new("HTTP/1.1".to_string(), 200, "OK".to_string());
+                message_queue.push(s);
 
-                response.add_header("Content-Type".to_string(), "application/json".to_string());
-                response.add_header(
-                    "Content-Length".to_string(),
-                    format!("{}", new_message.len()),
-                );
-                response.add_body(new_message);
+                thread::spawn(move || {
+                    let receiver: mpsc::Receiver<String> = r;
+                    let mut client = inc;
 
-                inc.write(response.to_string().as_bytes()).unwrap();
+                    loop {
+                        match receiver.try_recv() {
+                            Ok(message) => {
+                                println!("Received message!");
+
+                                let mut response = HttpResponse::new(
+                                    "HTTP/1.1".to_string(),
+                                    200,
+                                    "OK".to_string(),
+                                );
+
+                                let json = format!("{{\"message\": \"{}\"}}", message);
+
+                                response.add_header(
+                                    "Content-Type".to_string(),
+                                    "application/json".to_string(),
+                                );
+
+                                response.set_content_len(json.len());
+
+                                println!("{json:?}");
+
+                                response.add_body(json);
+
+                                client.write(response.to_string().as_bytes()).unwrap();
+                                client.flush().unwrap();
+
+                                break;
+                            }
+                            Err(_) => (),
+                        }
+
+                        thread::sleep(Duration::from_secs(1));
+                    }
+                });
             }
         } else if request.method == "POST" {
             if request.resource == "/login" {
                 let mut response =
                     HttpResponse::new("HTTP/1.1".to_string(), 303, "See other".to_string());
 
+                println!(
+                    "User {} has joined the chat.",
+                    request
+                        .body
+                        .as_ref()
+                        .unwrap()
+                        .split("=")
+                        .skip(1)
+                        .next()
+                        .unwrap()
+                );
+
                 response.add_header(
                     "Content-Type".to_string(),
                     "text/html; charset=utf-8".to_string(),
                 );
                 response.add_header("Location".to_string(), format!("http://{}/chat", address));
-                response.set_cookie(request.body.unwrap());
-                response.add_header("Content-Length".to_string(), "0".to_string());
+                response.set_cookie(request.body.clone().unwrap());
+                response.set_content_len(0);
 
                 inc.write(response.to_string().as_bytes()).unwrap();
             } else if request.resource == "/message" {
-                new_message = request.body.unwrap();
+                while let Some(sender) = message_queue.pop() {
+                    sender.send(request.body.clone().unwrap()).unwrap();
+                }
+
+                let mut response =
+                    HttpResponse::new("HTTP/1.1".to_string(), 204, "No Content".to_string());
+
+                response.set_content_len(0);
+
+                inc.write(response.to_string().as_bytes()).unwrap();
             }
         } else {
             let mut response =
                 HttpResponse::new("HTTP/1.1".to_string(), 404, "Not Found".to_string());
 
-            response.add_header("Content-Length".to_string(), "0".to_string());
+            response.set_content_len(0);
 
             inc.write(response.to_string().as_bytes()).unwrap();
         }
