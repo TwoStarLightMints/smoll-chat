@@ -12,6 +12,17 @@ use std::time::Duration;
 use local_ip_address::local_ip;
 use qrcode::QrCode;
 
+struct UserMessage {
+    pub username: String,
+    pub message: String,
+}
+
+impl UserMessage {
+    pub fn new(username: String, message: String) -> Self {
+        Self { username, message }
+    }
+}
+
 fn render_server_qr_code(address: &str) {
     let code = QrCode::new(format!("http://{}", address)).unwrap();
 
@@ -47,7 +58,7 @@ fn main() {
         render_server_qr_code(&address);
     }
 
-    let mut message_queue: Vec<Sender<String>> = Vec::new();
+    let mut message_queue: Vec<Sender<UserMessage>> = Vec::new();
 
     for stream in listener.incoming() {
         let mut inc = stream.unwrap();
@@ -97,21 +108,22 @@ fn main() {
                 message_queue.push(s);
 
                 thread::spawn(move || {
-                    let receiver: mpsc::Receiver<String> = r;
+                    let receiver: mpsc::Receiver<UserMessage> = r;
                     let mut client = inc;
 
                     loop {
                         match receiver.try_recv() {
                             Ok(message) => {
-                                println!("Received message!");
-
                                 let mut response = HttpResponse::new(
                                     "HTTP/1.1".to_string(),
                                     200,
                                     "OK".to_string(),
                                 );
 
-                                let json = format!("{{\"message\": \"{}\"}}", message);
+                                let json = format!(
+                                    "{{\"sender\": \"{}\", \"message\": \"{}\"}}",
+                                    message.username, message.message
+                                );
 
                                 response.add_header(
                                     "Content-Type".to_string(),
@@ -119,8 +131,6 @@ fn main() {
                                 );
 
                                 response.set_content_len(json.len());
-
-                                println!("{json:?}");
 
                                 response.add_body(json);
 
@@ -164,7 +174,19 @@ fn main() {
                 inc.write(response.to_string().as_bytes()).unwrap();
             } else if request.resource == "/message" {
                 while let Some(sender) = message_queue.pop() {
-                    sender.send(request.body.clone().unwrap()).unwrap();
+                    sender
+                        .send(UserMessage::new(
+                            request
+                                .get_header("Cookie")
+                                .unwrap()
+                                .split("=")
+                                .skip(1)
+                                .next()
+                                .unwrap()
+                                .to_string(),
+                            request.body.clone().unwrap(),
+                        ))
+                        .unwrap();
                 }
 
                 let mut response =
