@@ -119,6 +119,14 @@ impl HttpResponse {
     pub fn set_cookie(&mut self, cookie_value: String) {
         self.headers.insert("Set-Cookie".to_string(), cookie_value);
     }
+
+    pub fn set_content_len(&mut self, content_length: usize) {
+        self.add_header("Content-Length".to_string(), format!("{content_length}"));
+    }
+
+    pub fn set_content_type(&mut self, content_type: &str) {
+        self.add_header("Content-Type".to_string(), format!("{content_type}"));
+    }
 }
 
 impl Display for HttpResponse {
