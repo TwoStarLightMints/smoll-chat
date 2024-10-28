@@ -145,11 +145,32 @@ fn main() {
                         thread::sleep(Duration::from_secs(1));
                     }
                 });
+            } else if request.resource.starts_with("/static/") {
+                match std::fs::read_to_string(format!(
+                    "{}/resources/{}",
+                    static_dir,
+                    request.resource.splitn(3, "/").skip(2).next().unwrap()
+                )) {
+                    Ok(content) => {
+                        let mut response =
+                            HttpResponse::new("HTTP/1.1".to_string(), 200, "OK".to_string());
+
+                        response.set_content_type("text/css");
+                        response.set_content_len(content.len());
+
+                        response.add_body(content);
+
+                        inc.write(response.to_string().as_bytes()).unwrap();
+                    }
+                    Err(e) => eprintln!("Encountered error retrieving resource: {e}"),
+                }
             }
         } else if request.method == "POST" {
             if request.resource == "/login" {
                 let mut response =
                     HttpResponse::new("HTTP/1.1".to_string(), 303, "See other".to_string());
+
+                println!("{}", request.body.as_ref().unwrap());
 
                 println!(
                     "User {} has joined the chat.",
