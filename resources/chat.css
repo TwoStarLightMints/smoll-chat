@@ -1,0 +1,40 @@
+#chat-window {
+    border: 1px solid grey;
+    width: 30vw;
+    height: 40vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: scroll;
+}
+
+#chat-ui {
+    margin: 0 auto;
+    width: min-content;
+}
+
+#input-area {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 80% auto;
+    grid-gap: 0.5em;
+}
+
+#user-message {
+    color: #020009;
+    background-color: #e3c4c4;
+    word-break: break-all;
+}
+
+.message-bubble {
+    width: 80%;
+    border: 1px solid #e3c4c4;
+    border-radius: 4px;
+    padding: 0.25em;
+    word-break: break-all;
+}
+
+#input-area button {
+    height: fit-content;
+    align-self: center;
+}
