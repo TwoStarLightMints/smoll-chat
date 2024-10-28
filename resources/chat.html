@@ -21,18 +21,19 @@
 
             #chat-ui {
                 margin: 0 auto;
-                width: fit-content;
+                width: min-content;
             }
 
-            form[method="post"] {
-                display: flex;
-                justify-content: space-around;
-                align-items: center;
-                gap: 1em;
+            #input-area {
+                display: grid;
+                grid-template-columns: 80% 1fr;
+                grid-gap: 0.5em;
             }
 
-            form[method="post"] textarea {
-                flex-grow: 1;
+            #user-message {
+                color: #020009;
+                background-color: #e3c4c4;
+                word-break: break-all;
             }
 
             .message-bubble {
@@ -40,6 +41,7 @@
                 border: 1px solid #e3c4c4;
                 border-radius: 4px;
                 padding: 0.25em;
+                word-break: break-all;
             }
         </style>
 
@@ -48,11 +50,11 @@
         <div id="chat-ui">
             <div id="chat-window"></div>
 
-            <form action="/message" method="post">
-                <textarea name="message" id="message" rows="1" autofocus style="resize: none;"></textarea>
+            <div id="input-area">
+                <div id="user-message" contenteditable></div>
 
-                <button type="submit">Send</button>
-            </form>
+                <button>Send</button>
+            </div>
         </div>
 
         <script>
@@ -92,29 +94,18 @@
             get_new_message();
 
 
-            const textarea = document.querySelector('textarea');
+            const inputArea = document.querySelector('#user-message');
 
-            document.querySelector('button[type="submit"]').addEventListener('click', e => {
+            document.querySelector('#input-area button').addEventListener('click', e => {
                 e.preventDefault();
 
                 fetch(`${window.location.origin}/message`, {
                     method: "post",
-                    body: textarea.value,
+                    body: inputArea.textContent,
                 });
 
-                textarea.value = "";
+                inputArea.textContent = "";
             });
-
-            // The following grows the number of rows in the textarea
-            // in accordance with the input, I found the solution for this
-            // at https://stackoverflow.com/a/78177385
-            textarea.addEventListener("input", e => {
-                if (textarea.scrollTop > 0) {
-                    while (textarea.scrollTop > 0) {
-                        textarea.rows++;
-                    }
-                }
-            })
         </script>
     </body>
 </html>
