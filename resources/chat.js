@@ -5,22 +5,20 @@ async function get_new_message() {
         const response = await fetch(`${window.location.origin}/new-message`);
         const message_json = response.json()
             .then((value) => {
-                let new_p = document.createElement('p');
-
-                let new_node;
-
-                if (document.cookie.includes(value.sender)) {
-                    new_node = document.createTextNode(`You: ${value.message}`);
-                } else {
-                    new_node = document.createTextNode(`${value.sender}: ${value.message}`);
+                if (!document.cookie.includes(value.username)) {
+                    let new_p = document.createElement('p');
+            
+                    let new_node;
+            
+                    new_node = document.createTextNode(`${value.username}: ${value.message}`);
+            
+                    new_p.setAttribute("class", "message-bubble");
+            
+                    new_p.appendChild(new_node);
+                    chat_window.appendChild(new_p);
+            
+                    new_p.scrollIntoView();
                 }
-
-                new_p.setAttribute("class", "message-bubble");
-
-                new_p.appendChild(new_node);
-                chat_window.appendChild(new_p);
-
-                new_p.scrollIntoView();
             });
 
         new Promise(resolve => setTimeout(resolve, 50));
@@ -43,6 +41,19 @@ document.querySelector('#input-area button').addEventListener('click', e => {
         method: "post",
         body: inputArea.textContent,
     });
+
+    let new_p = document.createElement('p');
+
+    let new_node;
+
+    new_node = document.createTextNode(`You: ${inputArea.textContent}`);
+
+    new_p.setAttribute("class", "message-bubble");
+
+    new_p.appendChild(new_node);
+    chat_window.appendChild(new_p);
+
+    new_p.scrollIntoView();
 
     inputArea.textContent = "";
 });
