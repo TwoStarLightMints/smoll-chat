@@ -1,3 +1,9 @@
+#chat-window, #user-message {
+    color: #020009;
+    background-color: #e9f4f3;
+    border-radius: 0.25em;
+}
+
 #chat-window {
     border: 1px solid grey;
     width: 30vw;
@@ -18,20 +24,22 @@
     width: 100%;
     grid-template-columns: 80% auto;
     grid-gap: 0.5em;
+    margin-top: 0.5em;
 }
 
 #user-message {
-    color: #020009;
-    background-color: #e3c4c4;
     word-break: break-all;
+    min-height: 24px;
+    padding: 0.05em 0.5em;
 }
 
 .message-bubble {
-    width: 80%;
-    border: 1px solid #e3c4c4;
+    width: 90%;
+    border: 1px solid #020009;
     border-radius: 4px;
     padding: 0.25em;
     word-break: break-all;
+    color: #020009;
 }
 
 #input-area button {
