@@ -58,6 +58,8 @@ fn main() {
         render_server_qr_code(&address);
     }
 
+    let room_name = "My Room";
+
     let mut message_queue: Vec<Sender<UserMessage>> = Vec::new();
 
     for stream in listener.incoming() {
@@ -74,7 +76,13 @@ fn main() {
         if request.method == "GET" {
             if request.resource == "/" {
                 match std::fs::read_to_string(format!("{}/resources/index.html", static_dir)) {
-                    Ok(content) => {
+                    Ok(mut content) => {
+                        let mut content_split: Vec<&str> = content.split("{{}}").collect();
+
+                        content_split.insert(1, &room_name);
+
+                        content = content_split.join("");
+
                         let mut response =
                             HttpResponse::new("HTTP/1.1".to_string(), 200, "OK".to_string());
 
@@ -89,7 +97,13 @@ fn main() {
                 }
             } else if request.resource == "/chat" {
                 match std::fs::read_to_string(format!("{}/resources/chat.html", static_dir)) {
-                    Ok(content) => {
+                    Ok(mut content) => {
+                        let mut content_split: Vec<&str> = content.split("{{}}").collect();
+
+                        content_split.insert(1, &room_name);
+
+                        content = content_split.join("");
+
                         let mut response =
                             HttpResponse::new("HTTP/1.1".to_string(), 200, "OK".to_string());
 
@@ -155,7 +169,11 @@ fn main() {
                         let mut response =
                             HttpResponse::new("HTTP/1.1".to_string(), 200, "OK".to_string());
 
-                        response.set_content_type("text/css");
+                        if request.resource.ends_with(".css") {
+                            response.set_content_type("text/css");
+                        } else if request.resource.ends_with(".js") {
+                            response.set_content_type("text/javascript");
+                        }
                         response.set_content_len(content.len());
 
                         response.add_body(content);
