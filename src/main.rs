@@ -135,7 +135,7 @@ fn main() {
                                 );
 
                                 let json = format!(
-                                    "{{\"sender\": \"{}\", \"message\": \"{}\"}}",
+                                    "{{\"username\": \"{}\", \"message\": \"{}\"}}",
                                     message.username, message.message
                                 );
 
