@@ -103,7 +103,7 @@ fn main() {
 
                         let response = HttpResponse::builder()
                             .add_header("Content-Length", &format!("{}", content.len()))
-                            .add_header("Content-Type", "txt/html")
+                            .add_header("Content-Type", "text/html")
                             .body(&content);
 
                         inc.write(response.build().to_string().as_bytes()).unwrap();
