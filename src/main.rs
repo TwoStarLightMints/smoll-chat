@@ -1,7 +1,7 @@
 // Data to be sent with qr code
 // Server's ip and port information
 
-use smoll_chat::http::{HttpRequest, HttpResponse};
+use smoll_chat::http::{get_mime_type, HttpRequest, HttpResponse};
 use std::env;
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -83,15 +83,12 @@ fn main() {
 
                         content = content_split.join("");
 
-                        let mut response =
-                            HttpResponse::new("HTTP/1.1".to_string(), 200, "OK".to_string());
+                        let response = HttpResponse::builder()
+                            .add_header("Content-Length", &format!("{}", content.len()))
+                            .add_header("Content-Type", "text/html")
+                            .body(&content);
 
-                        response.set_content_len(content.len());
-                        response.set_content_type("text/html");
-
-                        response.add_body(content);
-
-                        inc.write(response.to_string().as_bytes()).unwrap();
+                        inc.write(response.build().to_string().as_bytes()).unwrap();
                     }
                     Err(e) => eprintln!("Encountered error retrieving resource: {e}"),
                 }
@@ -104,15 +101,12 @@ fn main() {
 
                         content = content_split.join("");
 
-                        let mut response =
-                            HttpResponse::new("HTTP/1.1".to_string(), 200, "OK".to_string());
+                        let response = HttpResponse::builder()
+                            .add_header("Content-Length", &format!("{}", content.len()))
+                            .add_header("Content-Type", "txt/html")
+                            .body(&content);
 
-                        response.set_content_len(content.len());
-                        response.set_content_type("text/html");
-
-                        response.add_body(content);
-
-                        inc.write(response.to_string().as_bytes()).unwrap();
+                        inc.write(response.build().to_string().as_bytes()).unwrap();
                     }
                     Err(e) => eprintln!("Encountered error retrieving resource: {e}"),
                 }
@@ -128,27 +122,22 @@ fn main() {
                     loop {
                         match receiver.try_recv() {
                             Ok(message) => {
-                                let mut response = HttpResponse::new(
-                                    "HTTP/1.1".to_string(),
-                                    200,
-                                    "OK".to_string(),
-                                );
-
                                 let json = format!(
                                     "{{\"username\": \"{}\", \"message\": \"{}\"}}",
                                     message.username, message.message
                                 );
 
-                                response.add_header(
-                                    "Content-Type".to_string(),
-                                    "application/json".to_string(),
-                                );
+                                let response = HttpResponse::builder()
+                                    .http_version("HTTP/1.1")
+                                    .status_code(200)
+                                    .status_message("OK")
+                                    .add_header("Content-Type", "application/json")
+                                    .add_header("Content-Length", &format!("{}", json.len()))
+                                    .body(&json);
 
-                                response.set_content_len(json.len());
-
-                                response.add_body(json);
-
-                                client.write(response.to_string().as_bytes()).unwrap();
+                                client
+                                    .write(response.build().to_string().as_bytes())
+                                    .unwrap();
                                 client.flush().unwrap();
 
                                 break;
@@ -166,29 +155,29 @@ fn main() {
                     request.resource.splitn(3, "/").skip(2).next().unwrap()
                 )) {
                     Ok(content) => {
-                        let mut response =
-                            HttpResponse::new("HTTP/1.1".to_string(), 200, "OK".to_string());
+                        let response = HttpResponse::builder()
+                            .http_version("HTTP/1.1")
+                            .status_code(200)
+                            .status_message("OK")
+                            .add_header("Content-Type", &get_mime_type(&request.resource))
+                            .add_header("Content-Length", &format!("{}", content.len()))
+                            .body(&content);
 
-                        if request.resource.ends_with(".css") {
-                            response.set_content_type("text/css");
-                        } else if request.resource.ends_with(".js") {
-                            response.set_content_type("text/javascript");
-                        }
-                        response.set_content_len(content.len());
-
-                        response.add_body(content);
-
-                        inc.write(response.to_string().as_bytes()).unwrap();
+                        inc.write(response.build().to_string().as_bytes()).unwrap();
                     }
                     Err(e) => eprintln!("Encountered error retrieving resource: {e}"),
                 }
             }
         } else if request.method == "POST" {
             if request.resource == "/login" {
-                let mut response =
-                    HttpResponse::new("HTTP/1.1".to_string(), 303, "See other".to_string());
-
-                println!("{}", request.body.as_ref().unwrap());
+                let response = HttpResponse::builder()
+                    .http_version("HTTP/1.1")
+                    .status_code(303)
+                    .status_message("See Other")
+                    .add_header("Content-Type", "text/html")
+                    .add_header("Content-Length", "0")
+                    .add_header("Location", &format!("http://{}/chat", address))
+                    .add_cookie(request.body.as_ref().unwrap());
 
                 println!(
                     "User {} has joined the chat.",
@@ -202,15 +191,7 @@ fn main() {
                         .unwrap()
                 );
 
-                response.add_header(
-                    "Content-Type".to_string(),
-                    "text/html; charset=utf-8".to_string(),
-                );
-                response.add_header("Location".to_string(), format!("http://{}/chat", address));
-                response.set_cookie(request.body.clone().unwrap());
-                response.set_content_len(0);
-
-                inc.write(response.to_string().as_bytes()).unwrap();
+                inc.write(response.build().to_string().as_bytes()).unwrap();
             } else if request.resource == "/message" {
                 while let Some(sender) = message_queue.pop() {
                     sender
@@ -228,20 +209,22 @@ fn main() {
                         .unwrap();
                 }
 
-                let mut response =
-                    HttpResponse::new("HTTP/1.1".to_string(), 204, "No Content".to_string());
+                let response = HttpResponse::builder()
+                    .http_version("HTTP/1.1")
+                    .status_code(200)
+                    .status_message("OK")
+                    .add_header("Content-Length", "0");
 
-                response.set_content_len(0);
-
-                inc.write(response.to_string().as_bytes()).unwrap();
+                inc.write(response.build().to_string().as_bytes()).unwrap();
             }
         } else {
-            let mut response =
-                HttpResponse::new("HTTP/1.1".to_string(), 404, "Not Found".to_string());
+            let response = HttpResponse::builder()
+                .http_version("HTTP/1.1")
+                .status_code(404)
+                .status_message("Not Found")
+                .add_header("Content-Length", "0");
 
-            response.set_content_len(0);
-
-            inc.write(response.to_string().as_bytes()).unwrap();
+            inc.write(response.build().to_string().as_bytes()).unwrap();
         }
     }
 }
