@@ -1,4 +1,19 @@
-use std::{collections::HashMap, fmt::Display};
+use std::collections::HashMap;
+use std::fmt::Display;
+use std::fs::File;
+use std::io::Read;
+use std::path::PathBuf;
+
+pub const MIME_MAP: &[(&str, &str)] = &[("js", "text/javascript"), ("css", "text/css")];
+
+fn get_mime_type(file_name: &str) -> String {
+    MIME_MAP
+        .iter()
+        .find(|kv| kv.0 == file_name.split(".").skip(1).next().unwrap())
+        .expect(&format!("Could not determine MIME type for {file_name}"))
+        .1
+        .to_string()
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct HttpRequest {
@@ -126,6 +141,36 @@ impl HttpResponse {
 
     pub fn set_content_type(&mut self, content_type: &str) {
         self.add_header("Content-Type".to_string(), format!("{content_type}"));
+    }
+
+    pub fn add_file_content(&mut self, directory: PathBuf, file_name: &str) {
+        match std::fs::read_to_string(format!("{}/{file_name}", directory.display())) {
+            Ok(file) => {
+                self.status_code = 200;
+                self.status_message = "OK".to_string();
+
+                self.set_content_len(file.len());
+
+                self.set_content_type(&get_mime_type(file_name));
+
+                self.add_body(file);
+            }
+            Err(e) => {
+                eprintln!("Error accessing resource {file_name}: {e}");
+
+                let not_found =
+                    std::fs::read_to_string(format!("{}/404.html", directory.display())).unwrap();
+
+                self.status_code = 404;
+                self.status_message = "Not Found".to_string();
+
+                self.set_content_len(not_found.len());
+
+                self.set_content_type("text/html");
+
+                self.add_body(not_found);
+            }
+        }
     }
 }
 
