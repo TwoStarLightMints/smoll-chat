@@ -123,54 +123,8 @@ impl HttpResponse {
         }
     }
 
-    pub fn add_header(&mut self, header_key: String, header_value: String) {
-        self.headers.insert(header_key, header_value);
-    }
-
-    pub fn add_body(&mut self, body: String) {
-        self.body = Some(body);
-    }
-
-    pub fn set_cookie(&mut self, cookie_value: String) {
-        self.headers.insert("Set-Cookie".to_string(), cookie_value);
-    }
-
-    pub fn set_content_len(&mut self, content_length: usize) {
-        self.add_header("Content-Length".to_string(), format!("{content_length}"));
-    }
-
-    pub fn set_content_type(&mut self, content_type: &str) {
-        self.add_header("Content-Type".to_string(), format!("{content_type}"));
-    }
-
-    pub fn add_file_content(&mut self, directory: PathBuf, file_name: &str) {
-        match std::fs::read_to_string(format!("{}/{file_name}", directory.display())) {
-            Ok(file) => {
-                self.status_code = 200;
-                self.status_message = "OK".to_string();
-
-                self.set_content_len(file.len());
-
-                self.set_content_type(&get_mime_type(file_name));
-
-                self.add_body(file);
-            }
-            Err(e) => {
-                eprintln!("Error accessing resource {file_name}: {e}");
-
-                let not_found =
-                    std::fs::read_to_string(format!("{}/404.html", directory.display())).unwrap();
-
-                self.status_code = 404;
-                self.status_message = "Not Found".to_string();
-
-                self.set_content_len(not_found.len());
-
-                self.set_content_type("text/html");
-
-                self.add_body(not_found);
-            }
-        }
+    pub fn builder() -> HttpResponseBuilder {
+        HttpResponseBuilder::default()
     }
 }
 
@@ -190,6 +144,82 @@ impl Display for HttpResponse {
         match self.body.as_ref() {
             Some(b) => write!(f, "{}{}\r\n{}", status_line, headers, b),
             None => write!(f, "{}{}\r\n", status_line, headers),
+        }
+    }
+}
+
+#[derive(Default)]
+struct HttpResponseBuilder {
+    http_version: Option<String>,
+    status_code: Option<u32>,
+    status_message: Option<String>,
+    headers: HashMap<String, String>,
+    body: Option<String>,
+}
+
+impl HttpResponseBuilder {
+    pub fn http_version(mut self, http_version: &str) -> Self {
+        self.http_version = Some(http_version.to_string());
+
+        self
+    }
+
+    pub fn status_code(mut self, status_code: u32) -> Self {
+        self.status_code = Some(status_code);
+
+        self
+    }
+
+    pub fn status_message(mut self, status_message: &str) -> Self {
+        self.status_message = Some(status_message.to_string());
+
+        self
+    }
+
+    pub fn add_header(mut self, key: &str, value: &str) -> Self {
+        self.headers.insert(key.to_string(), value.to_string());
+
+        self
+    }
+
+    pub fn body(mut self, body: &str) -> Self {
+        self.body = Some(body.to_string());
+
+        self
+    }
+
+    pub fn add_cookie(mut self, cookie: &str) -> Self {
+        self.add_header("Set-Cookie", cookie)
+    }
+
+    pub fn get_file_or_404(self, directory: PathBuf, resource_name: &str) -> Self {
+        match std::fs::read_to_string(format!("{}/{resource_name}", directory.display())) {
+            Ok(content) => self
+                .add_header("Content-Length", &format!("{}", content.len()))
+                .add_header(
+                    "Content-Type",
+                    &get_mime_type(resource_name.split(".").skip(1).next().unwrap()),
+                )
+                .body(&content),
+            Err(e) => {
+                eprintln!("Error retrieving resource {resource_name}: {e}");
+                let not_found =
+                    std::fs::read_to_string(format!("{}/404.html", directory.display())).unwrap();
+
+                self.add_header("Content-Length", &format!("{}", not_found.len()))
+                    .add_header("Content-Type", "text/html")
+                    .body(&not_found)
+            }
+        }
+    }
+
+    pub fn build(self) -> HttpResponse {
+        HttpResponse {
+            http_version: self.http_version.unwrap_or("HTTP/1.1".to_string()),
+            status_code: self.status_code.unwrap_or(404),
+            status_message: self.status_message.unwrap_or("Not Found".to_string()),
+            headers: self.headers,
+            body: self.body,
         }
     }
 }
@@ -442,14 +472,16 @@ mod tests {
 
     #[test]
     fn test_proper_http_response_formatting() {
-        let mut http_response = HttpResponse::new("HTTP/1.1".to_string(), 200, "OK".to_string());
-        http_response.add_header("Set-Cookie".to_string(), "username=asdf".to_string());
-        http_response.add_header("Content-Length".to_string(), "22".to_string());
+        let http_response = HttpResponse::builder()
+            .http_version("HTTP/1.1")
+            .status_code(200)
+            .status_message("OK")
+            .add_cookie("username=asdf")
+            .add_header("Content-Length", "22")
+            .body("Simulated file content");
 
         let control = "HTTP/1.1 200 OK\r\nSet-Cookie: username=asdf\r\nContent-Length: 22\r\n\r\nSimulated file content".to_string();
 
-        http_response.add_body("Simulated file content".to_string());
-
-        assert_eq!(control, http_response.to_string());
+        assert_eq!(control, http_response.build().to_string());
     }
 }
