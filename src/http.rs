@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 pub const MIME_MAP: &[(&str, &str)] = &[("js", "text/javascript"), ("css", "text/css")];
 
-fn get_mime_type(file_name: &str) -> String {
+pub fn get_mime_type(file_name: &str) -> String {
     MIME_MAP
         .iter()
         .find(|kv| kv.0 == file_name.split(".").skip(1).next().unwrap())
@@ -149,7 +149,7 @@ impl Display for HttpResponse {
 }
 
 #[derive(Default)]
-struct HttpResponseBuilder {
+pub struct HttpResponseBuilder {
     http_version: Option<String>,
     status_code: Option<u32>,
     status_message: Option<String>,
@@ -190,27 +190,6 @@ impl HttpResponseBuilder {
 
     pub fn add_cookie(mut self, cookie: &str) -> Self {
         self.add_header("Set-Cookie", cookie)
-    }
-
-    pub fn get_file_or_404(self, directory: PathBuf, resource_name: &str) -> Self {
-        match std::fs::read_to_string(format!("{}/{resource_name}", directory.display())) {
-            Ok(content) => self
-                .add_header("Content-Length", &format!("{}", content.len()))
-                .add_header(
-                    "Content-Type",
-                    &get_mime_type(resource_name.split(".").skip(1).next().unwrap()),
-                )
-                .body(&content),
-            Err(e) => {
-                eprintln!("Error retrieving resource {resource_name}: {e}");
-                let not_found =
-                    std::fs::read_to_string(format!("{}/404.html", directory.display())).unwrap();
-
-                self.add_header("Content-Length", &format!("{}", not_found.len()))
-                    .add_header("Content-Type", "text/html")
-                    .body(&not_found)
-            }
-        }
     }
 
     pub fn build(self) -> HttpResponse {
