@@ -23,6 +23,110 @@ impl UserMessage {
     }
 }
 
+struct SmollChatOpts {
+    pub port: u32,
+    pub qrcode: bool,
+    pub static_dir: PathBuf,
+    pub room_name: String,
+}
+
+impl SmollChatOpts {
+    pub fn default() -> Self {
+        Self {
+            port: 8080,
+            qrcode: false,
+            static_dir: env::current_dir().unwrap(),
+            room_name: String::from("Room"),
+        }
+    }
+
+    pub fn parse() -> Self {
+        let env_file = File::open(".env");
+
+        match env_file {
+            Ok(file) => Self::parse_env(file),
+            Err(_) => Self::parse_args(env::args()),
+        }
+    }
+
+    pub fn parse_args(mut args: env::Args) -> Self {
+        let mut opts_parsed = Self::default();
+
+        while let Some(opt) = args.next() {
+            match opt.as_str() {
+                "--port" | "-p" => {
+                    opts_parsed.port = args
+                        .next()
+                        .expect("Not enough arguments passed")
+                        .parse::<u32>()
+                        .expect("Invalid port number passed");
+                }
+                "--qrcode" => {
+                    opts_parsed.qrcode = args
+                        .next()
+                        .expect("Not enough arguments passed")
+                        .parse::<bool>()
+                        .expect("Invalid boolean passed")
+                }
+                "--static-dir" => {
+                    opts_parsed.static_dir =
+                        PathBuf::from(args.next().expect("Not enough arguments passed"))
+                }
+                "--room-name" => {
+                    opts_parsed.room_name = args.next().expect("Not enough arguments passed")
+                }
+                _ => (),
+            }
+        }
+
+        opts_parsed
+    }
+
+    pub fn parse_env(mut env_file: File) -> Self {
+        let mut opts_parsed = Self::default();
+
+        let mut buf = String::new();
+
+        env_file
+            .read_to_string(&mut buf)
+            .expect("Error reading opts file");
+
+        buf.lines().for_each(|l| {
+            let mut line = l.split("=");
+
+            match line.next().expect("Error in env file formatting") {
+                "port" => {
+                    opts_parsed.port = line
+                        .next()
+                        .expect("No value provided in env file")
+                        .parse::<u32>()
+                        .expect("Invalid port number passed")
+                }
+                "qrcode" => {
+                    opts_parsed.qrcode = line
+                        .next()
+                        .expect("No value provided in env file")
+                        .parse::<bool>()
+                        .expect("Invalid boolean passed")
+                }
+                "static-dir" => {
+                    opts_parsed.static_dir =
+                        PathBuf::from(line.next().expect("No value provided in env file"))
+                }
+                "room-name" => {
+                    opts_parsed.room_name = line
+                        .next()
+                        .expect("No value provided in env file")
+                        .to_string()
+                }
+                _ => (),
+            }
+        });
+
+        opts_parsed
+    }
+}
+
 fn render_server_qr_code(address: &str) {
     let code = QrCode::new(format!("http://{}", address)).unwrap();
 
