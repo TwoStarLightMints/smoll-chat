@@ -188,7 +188,7 @@ impl HttpResponseBuilder {
         self
     }
 
-    pub fn add_cookie(mut self, cookie: &str) -> Self {
+    pub fn add_cookie(self, cookie: &str) -> Self {
         self.add_header("Set-Cookie", cookie)
     }
 
