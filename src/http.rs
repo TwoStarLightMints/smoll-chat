@@ -1,8 +1,5 @@
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::fs::File;
-use std::io::Read;
-use std::path::PathBuf;
 
 pub const MIME_MAP: &[(&str, &str)] = &[("js", "text/javascript"), ("css", "text/css")];
 
