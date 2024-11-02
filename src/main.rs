@@ -3,8 +3,10 @@
 
 use smoll_chat::http::{get_mime_type, HttpRequest, HttpResponse};
 use std::env;
+use std::fs::File;
 use std::io::{Read, Write};
 use std::net::TcpListener;
+use std::path::PathBuf;
 use std::sync::mpsc::{self, Sender};
 use std::thread;
 use std::time::Duration;
@@ -140,29 +142,17 @@ fn render_server_qr_code(address: &str) {
 }
 
 fn main() {
-    let args: Vec<_> = env::args().collect();
+    let options = SmollChatOpts::parse();
 
-    let static_dir = env::current_dir().unwrap().to_str().unwrap().to_string();
-
-    if args.len() < 3 || !(&args[1] == "--port" || &args[1] == "-p") {
-        eprintln!("No port provided, please provide a port with -p or --port");
-        return;
-    }
-
-    let port = &args[2];
-    let addr = local_ip().unwrap().to_string();
-
-    let address = format!("{}:{}", addr, port);
+    let address = format!("{}:{}", local_ip().unwrap().to_string(), options.port);
 
     let listener = TcpListener::bind(&address).expect("Failed to initialize server");
 
-    println!("Server now running at http://{}", address);
-
-    if args.len() > 3 && args[3] == "--qrcode" {
+    if options.qrcode {
         render_server_qr_code(&address);
     }
 
-    let room_name = "My Room";
+    println!("Server now running at http://{}", address);
 
     let mut message_queue: Vec<Sender<UserMessage>> = Vec::new();
 
@@ -179,11 +169,15 @@ fn main() {
 
         if request.method == "GET" {
             if request.resource == "/" {
-                match std::fs::read_to_string(format!("{}/resources/index.html", static_dir)) {
+                println!("{}", format!("{}/index.html", options.static_dir.display()));
+                match std::fs::read_to_string(format!(
+                    "{}/index.html",
+                    options.static_dir.display()
+                )) {
                     Ok(mut content) => {
                         let mut content_split: Vec<&str> = content.split("{{}}").collect();
 
-                        content_split.insert(1, &room_name);
+                        content_split.insert(1, &options.room_name);
 
                         content = content_split.join("");
 
@@ -197,11 +191,12 @@ fn main() {
                     Err(e) => eprintln!("Encountered error retrieving resource: {e}"),
                 }
             } else if request.resource == "/chat" {
-                match std::fs::read_to_string(format!("{}/resources/chat.html", static_dir)) {
+                match std::fs::read_to_string(format!("{}/chat.html", options.static_dir.display()))
+                {
                     Ok(mut content) => {
                         let mut content_split: Vec<&str> = content.split("{{}}").collect();
 
-                        content_split.insert(1, &room_name);
+                        content_split.insert(1, &options.room_name);
 
                         content = content_split.join("");
 
@@ -254,8 +249,8 @@ fn main() {
                 });
             } else if request.resource.starts_with("/static/") {
                 match std::fs::read_to_string(format!(
-                    "{}/resources/{}",
-                    static_dir,
+                    "{}/{}",
+                    options.static_dir.display(),
                     request.resource.splitn(3, "/").skip(2).next().unwrap()
                 )) {
                     Ok(content) => {
