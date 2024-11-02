@@ -1,0 +1,13 @@
+This project includes the following open source software:
+
+1. local-ip-address
+	Copyright 2021 Esteban Borai and Contributors
+	Licensed under the Apache License, Version 2.0 and the MIT License
+
+2. qrcode-rust
+	Copyright 2016 kennytm
+	Licensed under the Apache License, Version 2.0 and the MIT License
+
+Full license texts can be found at:
+MIT License: https://opensource.org/licenses/MIT
+Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0
