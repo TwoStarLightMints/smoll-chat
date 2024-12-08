@@ -1,12 +1,16 @@
-use std::{error::Error, fmt};
+use std::fmt;
 
-#[derive(Debug, Clone)]
-pub struct RouteAlreadyRegistered;
+#[derive(Debug)]
+enum OptionParsingError {
+    InvalidKey(String),
+    InvalidValue(String),
+}
 
-impl Error for RouteAlreadyRegistered {}
-
-impl fmt::Display for RouteAlreadyRegistered {
+impl fmt::Display for OptionParsingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Route was already registered to other resource")
+        match self {
+            Self::InvalidKey(key) => write!(f, "Invalid key encountered when parsing: {}", key),
+            Self::InvalidValue(val) => write!(f, "Invalid value encountered when parsing: {}", val),
+        }
     }
 }
