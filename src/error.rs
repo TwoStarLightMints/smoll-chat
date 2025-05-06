@@ -1,9 +1,10 @@
 use std::fmt;
 
 #[derive(Debug)]
-enum OptionParsingError {
+pub enum OptionParsingError {
     InvalidKey(String),
     InvalidValue(String),
+    NoValueFound,
 }
 
 impl fmt::Display for OptionParsingError {
@@ -11,6 +12,7 @@ impl fmt::Display for OptionParsingError {
         match self {
             Self::InvalidKey(key) => write!(f, "Invalid key encountered when parsing: {}", key),
             Self::InvalidValue(val) => write!(f, "Invalid value encountered when parsing: {}", val),
+            Self::NoValueFound => write!(f, "Expected a value, found none"),
         }
     }
 }
