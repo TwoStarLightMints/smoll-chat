@@ -1,15 +1,9 @@
-// Data to be sent with qr code
-// Server's ip and port information
-
 use smoll_chat::{
     http::{get_mime_type, HttpRequest, HttpResponse},
-    option_parse,
+    option_parse::SmollChatOpts,
 };
-use std::env;
-use std::fs::File;
 use std::io::{Read, Write};
 use std::net::TcpListener;
-use std::path::PathBuf;
 use std::sync::mpsc::{self, Sender};
 use std::thread;
 use std::time::Duration;
@@ -67,8 +61,9 @@ fn main() {
         let request = HttpRequest::parse(&raw_request);
 
         if request.method == "GET" {
+            println!("[GET] {}", request.resource);
+
             if request.resource == "/" {
-                println!("{}", format!("{}/index.html", options.static_dir.display()));
                 match std::fs::read_to_string(format!(
                     "{}/index.html",
                     options.static_dir.display()
@@ -165,6 +160,13 @@ fn main() {
                     }
                     Err(e) => eprintln!("Encountered error retrieving resource: {e}"),
                 }
+            } else {
+                let response = HttpResponse::builder()
+                    .http_version("HTTP/1.1")
+                    .status_code(404)
+                    .status_message("Not found");
+
+                inc.write(response.build().to_string().as_bytes()).unwrap();
             }
         } else if request.method == "POST" {
             if request.resource == "/login" {
