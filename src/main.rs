@@ -60,9 +60,9 @@ fn main() {
 
         let request = HttpRequest::parse(&raw_request);
 
-        if request.method == "GET" {
-            println!("[GET] {}", request.resource);
+        println!("[{}] {}", request.method, request.resource);
 
+        if request.method == "GET" {
             if request.resource == "/" {
                 match std::fs::read_to_string(format!(
                     "{}/index.html",
@@ -216,6 +216,8 @@ fn main() {
                     .add_header("Content-Length", "0");
 
                 inc.write(response.build().to_string().as_bytes()).unwrap();
+            } else if request.resource == "/socket" {
+                todo!("Subscribe the tcp stream to a set of other streams setup with websocket");
             }
         } else {
             let response = HttpResponse::builder()
