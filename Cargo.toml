@@ -3,6 +3,12 @@ name = "smoll-chat"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "http-server"
+
+[[bin]]
+name = "websocket-server"
+
 [dependencies]
 qrcode = "0.14.1"
 local-ip-address = "0.6.3"
