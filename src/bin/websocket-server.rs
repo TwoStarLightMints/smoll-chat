@@ -10,6 +10,14 @@ fn main() {
     let listener = TcpListener::bind(format!("{}:8081", local_ip().unwrap())).unwrap();
     listener.set_nonblocking(true).unwrap();
 
+    println!(
+        "{}",
+        format!(
+            "WebSocket server listening at: {}:8081",
+            local_ip().unwrap()
+        )
+    );
+
     for inc in listener.incoming() {
         match inc {
             Ok(stream) => websocket_pool.client_join(stream),
