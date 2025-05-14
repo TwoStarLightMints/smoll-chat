@@ -31,16 +31,17 @@ impl WebSocketPool {
     }
 
     pub fn client_join(&mut self, client: TcpStream) {
-        for ele in self.socket_streams.iter() {
-            println!("{}", ele.is_ready());
-        }
         match self
             .socket_streams
             .iter_mut()
             .filter(|w| w.is_ready())
             .next()
         {
-            Some(socket) => socket.handle_client(client),
+            Some(socket) => {
+                println!("[Client Connected] Socket ID# {}", socket.id);
+
+                socket.handle_client(client);
+            }
             None => eprintln!("No streams available"),
         }
     }
@@ -48,7 +49,7 @@ impl WebSocketPool {
     pub fn run(&mut self) {
         self.socket_streams.iter().for_each(|s| match s.poll() {
             Ok(message) => {
-                println!("{message}");
+                println!("[Message Sent] {message}");
 
                 self.socket_streams
                     .iter()
@@ -90,9 +91,11 @@ impl WebSocket {
             loop {
                 match recv.try_recv() {
                     Ok(mut stream) => {
+                        println!("[Handshake] Performing initial handshake...");
+
                         websocket_initial_handshake(&mut stream);
 
-                        println!("Performed handshake");
+                        println!("[Handshake] Initial handshake successful");
 
                         websocket_handle_connection(stream, &mut send, &message_recv);
 
@@ -121,13 +124,13 @@ impl WebSocket {
     }
 
     fn handle_client(&mut self, stream: TcpStream) {
-        println!("Client info sent");
+        println!("[Client Stream] Client TCP stream being transmitted to handler...");
 
         self.sender.send(stream).expect("Error with client joining");
 
         *self.state.lock().unwrap() = WebSocketState::InUse;
 
-        println!("Client info received");
+        println!("[Client Stream] Client TCP stream successfully transmitted, socket id# {} is now in use", self.id);
     }
 
     fn poll(&self) -> Result<String, std::sync::mpsc::TryRecvError> {
@@ -240,7 +243,7 @@ fn websocket_handle_connection(
                     // Encountered close frame
                     stream.shutdown(std::net::Shutdown::Both).unwrap();
 
-                    println!("A client has disconnected");
+                    println!("[Disconnect] Client has disconnected");
 
                     break;
                 } else {
