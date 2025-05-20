@@ -90,13 +90,7 @@ impl WebSocket {
 
             loop {
                 match recv.try_recv() {
-                    Ok(mut stream) => {
-                        println!("[Handshake] Performing initial handshake...");
-
-                        websocket_initial_handshake(&mut stream);
-
-                        println!("[Handshake] Initial handshake successful");
-
+                    Ok(stream) => {
                         websocket_handle_connection(stream, &mut send, &message_recv);
 
                         let mut sock_state = sock_state.lock().unwrap();
@@ -151,12 +145,8 @@ fn calculate_accept_key(mut client_key: String) -> String {
     openssl::base64::encode_block(&hash)
 }
 
-fn websocket_initial_handshake(stream: &mut TcpStream) {
-    let mut buf = [0; 2048];
-
-    stream.read(&mut buf).unwrap();
-
-    let request = HttpRequest::parse(&String::from_utf8(buf.to_vec()).unwrap());
+pub fn websocket_initial_handshake(stream: &mut TcpStream, request: HttpRequest) {
+    println!("[Handshake] Performing initial handshake...");
 
     let accept_key = calculate_accept_key(request.get_header("Sec-WebSocket-Key").unwrap().clone());
 
@@ -171,6 +161,8 @@ fn websocket_initial_handshake(stream: &mut TcpStream) {
 
     stream.write(response.to_string().as_bytes()).unwrap();
     stream.flush().unwrap();
+
+    println!("[Handshake] Initial handshake successful");
 }
 
 fn get_message_length(message: &[u8]) -> (usize, usize) {
