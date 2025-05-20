@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::io::Read;
+use std::net::TcpStream;
 
 pub const MIME_MAP: &[(&str, &str)] = &[("js", "text/javascript"), ("css", "text/css")];
 
@@ -97,6 +99,16 @@ impl HttpRequest {
 
     pub fn get_header(&self, header_name: &str) -> Option<&String> {
         self.headers.get(header_name)
+    }
+}
+
+impl From<&mut TcpStream> for HttpRequest {
+    fn from(value: &mut TcpStream) -> Self {
+        let mut request_content = [0; 1024];
+
+        value.read(&mut request_content).unwrap();
+
+        HttpRequest::parse(&String::from_utf8(request_content.to_vec()).unwrap())
     }
 }
 
