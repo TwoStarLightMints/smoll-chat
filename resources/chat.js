@@ -1,7 +1,7 @@
 const chat_window = document.querySelector('#chat-window');
 const inputArea = document.querySelector('#user-message');
 
-const socket = new WebSocket("ws://{{}}");
+const socket = new WebSocket("ws://{{}}/socket");
 
 document.querySelector('#input-area button').addEventListener('click', e => {
     e.preventDefault();
