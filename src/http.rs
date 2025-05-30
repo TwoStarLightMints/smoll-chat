@@ -104,7 +104,7 @@ impl HttpRequest {
 
 impl From<&mut TcpStream> for HttpRequest {
     fn from(value: &mut TcpStream) -> Self {
-        let mut request_content = [0; 1024];
+        let mut request_content = [0; 2048];
 
         value.read(&mut request_content).unwrap();
 
