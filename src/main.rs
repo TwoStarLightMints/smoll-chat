@@ -118,7 +118,7 @@ fn handle_client(
                             .write(response.build().to_string().as_bytes())
                             .unwrap();
                     }
-                    Err(e) => eprintln!("Encountered error retrieving resource: {e}"),
+                    Err(e) => eprintln!("Error retrieving resource: {} == {}", request.resource, e),
                 }
             }
             _ => {
@@ -145,7 +145,7 @@ fn handle_client(
                     .add_cookie(request.body.as_ref().unwrap());
 
                 println!(
-                    "User {} has joined the chat.",
+                    "[ User join ] {}",
                     request
                         .body
                         .as_ref()
