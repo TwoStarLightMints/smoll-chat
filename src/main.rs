@@ -178,6 +178,8 @@ fn handle_client(
 fn main() {
     let options = SmollChatOpts::parse().unwrap();
 
+    println!("{}", options.to_string());
+
     let address = format!("{}:{}", local_ip().unwrap().to_string(), options.port);
 
     let listener = TcpListener::bind(&address).expect("Failed to initialize server");
@@ -185,7 +187,7 @@ fn main() {
         .set_nonblocking(true)
         .expect("Error settings nonblocking");
 
-    let mut websocket_pool = WebSocketPool::with_capacity(10);
+    let mut websocket_pool = WebSocketPool::with_capacity(options.max_clients);
 
     if options.qrcode {
         render_server_qr_code(&address);

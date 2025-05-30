@@ -1,6 +1,7 @@
 use crate::error;
 use std::convert::AsRef;
 use std::env;
+use std::fmt::Display;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -12,6 +13,7 @@ pub struct SmollChatOpts {
     pub qrcode: bool,
     pub static_dir: PathBuf,
     pub room_name: String,
+    pub max_clients: usize,
 }
 
 impl SmollChatOpts {
@@ -21,6 +23,7 @@ impl SmollChatOpts {
             qrcode: false,
             static_dir: env::current_dir().unwrap(),
             room_name: String::from("Room"),
+            max_clients: 10,
         }
     }
 
@@ -77,6 +80,19 @@ impl SmollChatOpts {
                 "--room-name" => {
                     opts_parsed.room_name = match iter.next() {
                         Some(v) => v.as_ref().to_string(),
+                        None => return Err(error::OptionParsingError::NoValueFound),
+                    }
+                }
+                "--max-clients" => {
+                    opts_parsed.max_clients = match iter.next() {
+                        Some(v) => match v.as_ref().parse::<usize>() {
+                            Ok(max_clients) => max_clients,
+                            Err(_) => {
+                                return Err(error::OptionParsingError::InvalidValue(
+                                    v.as_ref().to_string(),
+                                ));
+                            }
+                        },
                         None => return Err(error::OptionParsingError::NoValueFound),
                     }
                 }
@@ -148,10 +164,35 @@ impl SmollChatOpts {
                         None => return Err(error::OptionParsingError::NoValueFound),
                     }
                 }
+                "max-clients" => {
+                    opts_parsed.max_clients = match value {
+                        Some(v) => match v.parse::<usize>() {
+                            Ok(max_clients) => max_clients,
+                            Err(_) => {
+                                return Err(error::OptionParsingError::InvalidValue(v.to_string()));
+                            }
+                        },
+                        None => return Err(error::OptionParsingError::NoValueFound),
+                    }
+                }
                 _ => return Err(error::OptionParsingError::InvalidKey(key.to_string())),
             }
         }
 
         return Ok(opts_parsed);
+    }
+}
+
+impl Display for SmollChatOpts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Server Config\nPort Number: {}\nQR Code Enabled: {}\nStatic Directory: {}\nRoom Name: {}\nMax Number of Clients: {}",
+            self.port,
+            if self.qrcode {"Yes"} else {"No"},
+            self.static_dir.to_str().unwrap(),
+            self.room_name,
+            self.max_clients
+        )
     }
 }
