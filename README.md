@@ -2,7 +2,7 @@
 A toy chat server project.
 
 ## Dependencies
-(openssl)[https://www.openssl.org/]
+[openssl](https://www.openssl.org/)
 
 ## Env File Structure
 key=value
